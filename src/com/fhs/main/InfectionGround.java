@@ -3,9 +3,13 @@ package com.fhs.main;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
+import java.awt.MouseInfo;
+import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Timer;
@@ -16,17 +20,24 @@ import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
+
 import net.miginfocom.swing.MigLayout;
 
 public class InfectionGround extends JPanel {
     
+    volatile boolean runSim = true;
+    volatile boolean pauseSim = false;
+    protected int startX = -1;
+    protected int startY = -1;
+    protected boolean startInfected = true;
+
     public static void main(String[] args) {
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setSize(800, 800);
         frame.setLayout(new MigLayout("insets 0, gap rel 0", "[grow, fill][10%]", "[grow, fill]"));
         final InfectionGround ig = new InfectionGround();
-        final ControlPanel cp = new ControlPanel();
+        final ControlPanel cp = new ControlPanel(ig);
         
         ig.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
         frame.add(ig);
@@ -56,19 +67,47 @@ public class InfectionGround extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 int x = e.getX();
                 int y = e.getY();
-                ig.createPerson(x, y, true);
+                
+                if (e.getButton() == 1) { // left click
+                    Agent clickedAgent = ig.population.retrieve(x, y);
+                    cp.clickedAgent(clickedAgent);
+                }
+                
             }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.getButton() == 3) {
+                    ig.startInfected = false;
+                } else if (e.getButton() == 2){
+                    ig.startInfected = true;
+                } else {
+                    return;
+                }
+                ig.startX = e.getX();
+                ig.startY = e.getY();
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (ig.startX != -1 && ig.startY != -1)
+                ig.createPerson(e.getX(), e.getY());
+            }
+            
         });
         
         Thread updateThread = new Thread(new Runnable() {
-            double time = 0.0;
             double dTime = 0.01 / 200;
             double currTime = System.currentTimeMillis();
             double accum = 0.0;
             
             @Override
             public void run() {
-                while(true) {
+                while(ig.runSim) {
+                    if (ig.pauseSim) {
+                        this.currTime = System.currentTimeMillis();
+                        continue;
+                    }
                     double newTime = System.currentTimeMillis();
                     double frameTime = newTime - this.currTime;
                     this.currTime = newTime;
@@ -76,9 +115,10 @@ public class InfectionGround extends JPanel {
                     this.accum += frameTime;
                     
                     while (this.accum >= this.dTime) {
-                        ig.population.update(this.dTime, ig.getBounds());
+                        if (!ig.pauseSim) {
+                            ig.population.update(this.dTime, ig.getBounds());
+                        }
                         this.accum -= this.dTime;
-                        this.time += this.dTime;
                     }
                 }
             }
@@ -117,23 +157,42 @@ public class InfectionGround extends JPanel {
                 int diam = (Constants.INFECT_RADIUS * 2) + sz;
                 g2d.fillOval((int) person.x - rad, (int) person.y - rad, diam, diam);
                 
-                if (person.incubation > 0) {
+                if (person.incubation > 0 && this.drawIncub) {
                     g2d.setColor(Color.yellow.brighter());
                     float ratio = (person.incubation / Constants.INCUBATION) * (sz * 2);
                     g2d.drawOval((int) (person.x - ratio), (int) (person.y - ratio), (int) (2 * ratio) + sz, (int) (2 * ratio) + sz);
                 }
                 
-                g2d.setColor(new Color(255, 0, 0));
+                g2d.setColor(Color.RED);
                 g2d.fillOval((int) (person.x), (int) (person.y), sz, sz);
             }
-            Color crr = g2d.getColor();
-            g2d.setColor(new Color(crr.getRed(), crr.getGreen(), crr.getBlue(), 128));
-            g2d.drawLine((int) (person.x + (sz / 2.0)), (int) (person.y + (sz / 2.0)), (int) (person.x - (person.dx)), (int) (person.y - (person.dy)));
+            
+            if (this.drawVeloc) {
+                Color crr = g2d.getColor();
+                g2d.setColor(new Color(crr.getRed(), crr.getGreen(), crr.getBlue(), 128));
+                g2d.drawLine((int) (person.x + (sz / 2.0)), (int) (person.y + (sz / 2.0)), (int) (person.x - (person.dx)), (int) (person.y - (person.dy)));
+            }
+            
+            if (person.selected) {
+                g2d.setColor(Color.white);
+                g2d.drawRect((int)person.x - Constants.SELECT_RADIUS, (int)person.y - Constants.SELECT_RADIUS, Constants.SELECT_RADIUS * 2 + Constants.AGENT_SIZE, Constants.SELECT_RADIUS * 2 + Constants.AGENT_SIZE);
+            }
             
         }
+        
+        if (this.startX != -1 && this.startY != -1) {
+            g2d.setColor(this.startInfected ? Color.RED : Color.GREEN);
+            Point pt = MouseInfo.getPointerInfo().getLocation();
+            int x = (int) (pt.getX() - this.getLocationOnScreen().getX());
+            int y = (int) (pt.getY() - this.getLocationOnScreen().getY());
+            g2d.drawLine(this.startX, this.startY, x, y);
+        }
+        
     }
     
     Population population = new Population();
+    private boolean drawVeloc;
+    private boolean drawIncub;
     
     public void createPeople(int cnt, int h, int w, int infect) {
         Random rand = new Random();
@@ -172,125 +231,63 @@ public class InfectionGround extends JPanel {
             agent.infect = 0;
         this.population.addPerson(agent);
     }
+
+    protected void createPerson(int x, int y) {
+        Agent agent = new Agent();
+        agent.name = "Agent_custom_" + this.startX + "," + this.startY;
+        agent.x = this.startX;
+        agent.y = this.startY;
+        if (Math.abs(this.startX - x) < 0.1 && Math.abs(this.startY - y) < 0.1) {
+            Random rand = new Random();
+            agent.dx = rand.nextInt(32);
+            if (rand.nextBoolean()) agent.dx *= -1;
+            agent.dy = rand.nextInt(32);
+            if (rand.nextBoolean()) agent.dy *= -1;
+        } else {
+            agent.dx = this.startX - x;
+            agent.dy = this.startY - y;
+        }
+        agent.infect = this.startInfected ? 255 : 0;
+        this.startX = this.startY = -1;
+        this.startInfected = false;
+        this.population.addPerson(agent);
+    }
+
+
+
+    public void setDrawVelocity(boolean selected) {
+        this.drawVeloc = selected;
+    }
     
+    public void setDrawIncubation(boolean selected) {
+        this.drawIncub = selected;
+    }
+    
+    public void pausePlay(boolean sel) {
+        this.pauseSim = sel;
+    }
+
 }
 
-class Population {
-    ArrayList<Agent> people = new ArrayList<>();
-    ArrayList<Agent> infected = new ArrayList<>();
-    ArrayList<Agent>[][] agentGrid;
-    volatile boolean updating = false;
-    
-    public void addPerson(Agent person) {
-        while(this.updating) {};
-        this.people.add(person);
-        if (person.infect > 0) this.infected.add(person);
+class Stat {
+    final double time;
+    final int pop;
+    final int h;
+    final int i;
+    public Stat(double t, int p, int h, int i) {
+        this.time = t;
+        this.pop = p;
+        this.h = h;
+        this.i = i;
     }
-    
-    public void update(double timeDelta, Rectangle bnds) {
-        this.updating = true;
-        for (int i = 0; i < this.people.size(); i++) {
-            Agent person = this.people.get(i);
-            
-            person.x += timeDelta * person.dx;
-            person.y += timeDelta * person.dy;
-            
-            if (person.x <= 0.0) {
-                person.x = 0;
-                if (person.dx < 0.0) {
-                    person.dx *= -1.0;
-                }
-            }
-            if (person.x >= bnds.width) {
-                person.x = bnds.width;
-                if (person.dx > 0.0) {
-                    person.dx *= -1.0;
-                }
-            }
-            if (person.y <= 0.0) {
-                person.y = 0;
-                if (person.dy < 0.0) {
-                    person.dy *= -1.0;
-                }
-            }
-            if (person.y >= bnds.height) {
-                person.y = bnds.height;
-                if (person.dy > 0.0) {
-                    person.dy *= -1.0;
-                }
-            }
-            
-            
-            if (person.incubation > 0) {
-                person.incubation -= timeDelta;
-            } else {
-                if (person.infect > 0) {
-                    person.infect = (float) Math.min(255, person.infect + (timeDelta * person.deltaInfect));
-                }
-            }
-            
-        }
-        
-        int cells = 11;
-        this.agentGrid = new ArrayList[cells+1][cells+1];
-        for (int i = 0; i < cells + 1; i++) {
-            for (int j = 0; j < cells + 1; j++) {
-                this.agentGrid[i][j] = new ArrayList<>();
-            }
-        }
-        int stepW = bnds.width / cells;
-        int stepH = bnds.height / cells;
-        for (Agent person : this.people) {
-            int indX = (int) Math.floor((cells * person.x) / bnds.width);
-            int indY = (int) Math.floor((cells * person.y) / bnds.height);
-            this.agentGrid[indX][indY].add(person);
-        }
-
-        ArrayList<Agent> newInfected = new ArrayList<>();
-        for (Agent host : this.infected) {
-            if (host.incubation > 0) continue;
-            int hostX = (int) Math.floor((cells * host.x) / bnds.width);
-            int hostY = (int) Math.floor((cells * host.y) / bnds.height);
-            // check my bucket:
-            newInfected.addAll(infect(host, hostX, hostY, this.agentGrid));
-            // check if we need to look at adjacent buckets:
-            int indN = ((int) Math.floor((cells * (host.y - Constants.INFECT_RADIUS)) / bnds.height));
-            boolean checkN = indN < hostY && indN >= 0;
-            int indS = ((int) Math.floor((cells * (host.y + Constants.INFECT_RADIUS)) / bnds.height));
-            boolean checkS = indS > hostY && indS < cells;
-            int indW = ((int) Math.floor((cells * (host.x - Constants.INFECT_RADIUS)) / bnds.width));
-            boolean checkW = indW < hostX && indW >= 0;
-            int indE = ((int) Math.floor((cells * (host.x + Constants.INFECT_RADIUS)) / bnds.width));
-            boolean checkE = indE > hostX && indE < cells;
-            
-            if (checkN) { newInfected.addAll(infect(host, hostX, indN, this.agentGrid)); }
-            if (checkE) { newInfected.addAll(infect(host, indE, hostY, this.agentGrid)); }
-            if (checkS) { newInfected.addAll(infect(host, hostX, indS, this.agentGrid)); }
-            if (checkW) { newInfected.addAll(infect(host, indW, hostY, this.agentGrid)); }
-            if (checkN && checkE) { newInfected.addAll(infect(host, indE, indN, this.agentGrid)); }
-            if (checkN && checkW) { newInfected.addAll(infect(host, indW, indN, this.agentGrid)); }
-            if (checkS && checkE) { newInfected.addAll(infect(host, indE, indS, this.agentGrid)); }
-            if (checkS && checkW) { newInfected.addAll(infect(host, indW, indS, this.agentGrid)); }
-            
-        }
-        
-        this.infected.addAll(newInfected);
-        this.updating = false;
-    }
-    
-    private ArrayList<Agent> infect(Agent host, int indX, int indY, ArrayList<Agent>[][] agentGrid) {
-        ArrayList<Agent> newInfected = new ArrayList<>();
-        for (Agent person : agentGrid[indX][indY]) {
-            // ignore already infected;  later hyper-infected may increase takeover rate in less-infected people
-            if (person.infect > 0) continue;
-            // ignore out of range people
-            if (person.x > host.x + Constants.INFECT_RADIUS || person.x <= host.x - Constants.INFECT_RADIUS) continue;
-            if (person.y > host.y + Constants.INFECT_RADIUS || person.y <= host.y - Constants.INFECT_RADIUS) continue;
-            person.infect = person.deltaInfect;
-            person.incubation = Constants.INCUBATION;
-            newInfected.add(person);
-        }
-        return newInfected;
+    /* (non-Javadoc)
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(this.time).append(",").append(this.pop).append(",").append(this.h).append(",").append(this.i);
+        return builder.toString();
     }
     
 }
@@ -308,7 +305,9 @@ class Agent {
     float infect;
     // set for now
     int deltaInfect = 5;
-    
+    boolean selected = false;
+    Agent infector = null;
+    ArrayList<Agent> infected = new ArrayList<>();
     
     /* (non-Javadoc)
      * @see java.lang.Object#hashCode()
@@ -355,4 +354,6 @@ class Constants {
     static final int INFECT_RADIUS = 8;
     static final int INCUBATION = 10;
     static final int AGENT_SIZE = 4;
+    static final int AGENT_GRID_CELLS = 11;
+    static final int SELECT_RADIUS = 10;
 }
