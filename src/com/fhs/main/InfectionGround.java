@@ -39,7 +39,7 @@ public class InfectionGround extends JPanel {
         frame.add(cp);
         frame.setVisible(true);
         
-        Timer timer = new Timer();
+        Timer timer = new Timer("repaintTimer", true);
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -112,37 +112,33 @@ public class InfectionGround extends JPanel {
             
         });
         
-        Thread updateThread = new Thread(new Runnable() {
-            double dTime = 0.01 / 200;
-            double currTime = System.currentTimeMillis();
-            double accum = 0.0;
+        double dTime = 0.01 / 200;
+        double currTime = System.currentTimeMillis();
+        double accum = 0.0;
             
-            @Override
-            public void run() {
-                while(ig.runSim) {
-                    if (ig.pauseSim) {
-                        this.currTime = System.currentTimeMillis();
-                        continue;
-                    }
-                    double newTime = System.currentTimeMillis();
-                    double frameTime = newTime - this.currTime;
-                    this.currTime = newTime;
-                    
-                    this.accum += frameTime;
-                    
-                    while (this.accum >= this.dTime) {
-                        if (!ig.pauseSim) {
-                            ig.population.update(this.dTime, ig.getBounds());
-                            
-                        }
-                        this.accum -= this.dTime;
-                    }
-                }
+        while(ig.runSim) {
+            if (ig.pauseSim) {
+                currTime = System.currentTimeMillis();
+                continue;
             }
-        }, "updateThread");
-        updateThread.setDaemon(true);
-        updateThread.start();
+            double newTime = System.currentTimeMillis();
+            double frameTime = newTime - currTime;
+            currTime = newTime;
+            
+            accum += frameTime;
+            
+            while (accum >= dTime && ig.runSim) {
+                if (!ig.pauseSim) {
+                    ig.population.update(dTime, ig.getBounds());
+                    
+                }
+                accum -= dTime;
+            }
+        }
         
+        timer.cancel();
+        frame.setVisible(false);
+        frame.dispose();
         
     }
     

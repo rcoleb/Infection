@@ -124,13 +124,14 @@ public class ControlPanel extends JPanel {
     JCheckBox chkbxShowVel;
     JToggleButton tglbtnPlayPause;
     JButton btnReset;
+    private JButton btnExit;
 
     /**
      * Create the panel.
      */
     public ControlPanel(final InfectionGround scape) {
-        /////                                0 1 2 3  4    5 6 7 8   9     10   1112131415161718   19
-        setLayout(new MigLayout("", "[][]", "[][][][][30px][][][][][grow][16.00][][][][][][][][][grow 20]"));
+        /////                                0 1 2 3  4    5 6 7 8   9     10   1112131415  16     171819
+        setLayout(new MigLayout("", "[][]", "[][][][][30px][][][][][grow][16.00][][][][][][grow 10][][][]"));
         
         JSeparator separator = new JSeparator();
         add(separator, "flowx,cell 0 0 2 1,growx");
@@ -236,7 +237,7 @@ public class ControlPanel extends JPanel {
                 });
             }
         });
-        add(this.tglbtnPlayPause, "cell 0 16 2 1,growx");
+        add(this.tglbtnPlayPause, "cell 0 17 2 1,growx");
         
         this.btnReset = new JButton("Restart");
         this.btnReset.addActionListener(new ActionListener() {
@@ -254,7 +255,17 @@ public class ControlPanel extends JPanel {
                 scape.population.pingUpdate();
             }
         });
-        add(this.btnReset, "cell 0 17 2 1, growx");
+        add(this.btnReset, "cell 0 18 2 1, growx");
+        
+        
+        this.btnExit = new JButton("Exit");
+        this.btnExit.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                scape.runSim = false;
+            }
+        });
+        add(this.btnExit, "cell 0 19 2 1, growx");
         
     }
 
