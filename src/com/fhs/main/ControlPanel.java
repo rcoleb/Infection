@@ -189,7 +189,7 @@ public class ControlPanel extends JPanel {
         
         this.chkbxAvoidInfect = new JCheckBox("Avoid Infected");
         
-        this.chkbxInfectFollow = new JCheckBox("Follow Infector");
+        this.chkbxInfectFollow = new JCheckBox("Infected Follow");
         this.chkbxInfectFollow.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

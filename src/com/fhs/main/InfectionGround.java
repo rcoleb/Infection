@@ -55,7 +55,7 @@ public class InfectionGround extends JPanel {
                     }
                 });
             }
-        }, 0, 50);
+        }, 0, 40);
         
         ig.addMouseListener(new MouseAdapter() {
             @Override
@@ -91,7 +91,7 @@ public class InfectionGround extends JPanel {
                         Random rand = new Random();
                         int cnt = 1;
                         if (e.isAltDown()) {
-                            cnt = 0;
+                            cnt = 40;
                         }
                         for (int i = 0; i < cnt; i++) {
                             dx = rand.nextInt(32);
@@ -165,7 +165,7 @@ public class InfectionGround extends JPanel {
                 
             } else {
                 int tempInf = (int) person.infect;
-                g2d.setColor(new Color(tempInf, 255 - tempInf, 0, tempInf / 3));
+                g2d.setColor(new Color(tempInf, 0, 0, tempInf / 3));
                 int rad = Constants.INFECT_RADIUS;
                 int diam = (Constants.INFECT_RADIUS * 2) + sz;
                 g2d.fillOval((int) person.x - rad, (int) person.y - rad, diam, diam);
@@ -184,7 +184,7 @@ public class InfectionGround extends JPanel {
                 if (person.infector != null) {
                     Color c = g2d.getColor();
                     g2d.setColor(c.darker());
-                    g2d.drawLine((int) person.x, (int) person.y, (int) person.infector.x, (int) person.infector.y);
+                    g2d.drawLine((int) person.x + (Constants.AGENT_SIZE / 2), (int) person.y + (Constants.AGENT_SIZE / 2), (int) person.infector.x + (Constants.AGENT_SIZE / 2), (int) person.infector.y + (Constants.AGENT_SIZE / 2));
                     g2d.setColor(c);
                 }
                 for (Agent inf : person.infected ) {
