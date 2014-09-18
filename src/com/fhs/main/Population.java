@@ -2,6 +2,7 @@ package com.fhs.main;
 
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.TreeMap;
 
 import com.fhs.main.ControlPanel.UpdateListener;
@@ -286,6 +287,55 @@ public class Population {
         // this.prevStat = newStat;
         this.pingUpdate();
         // }
+    }
+
+    public void createPeople(int cnt, int h, int w, int infect) {
+        Random rand = new Random();
+        for (int i = 0; i < cnt; i++) {
+            Agent agent = new Agent();
+            agent.name = "Agent_" + i;
+            agent.x = rand.nextInt(w);
+            agent.y = rand.nextInt(w);
+            agent.dx = rand.nextInt(Constants.TOP_GEN_SPEED);
+            if (rand.nextBoolean()) agent.dx *= -1;
+            agent.dy = rand.nextInt(Constants.TOP_GEN_SPEED);
+            if (rand.nextBoolean()) agent.dy *= -1;
+            if (rand.nextInt(100) < infect)
+                agent.infect = rand.nextInt(256);
+            else
+                agent.infect = 0;
+            addPerson(agent);
+            
+        }
+        
+    }
+
+    public void createPerson(int x, int y, boolean infected) {
+        Random rand = new Random();
+        Agent agent = new Agent();
+        agent.name = "Agent_custom_" + x + "," + y;
+        agent.x = x;
+        agent.y = y;
+        agent.dx = rand.nextInt(32);
+        if (rand.nextBoolean()) agent.dx *= -1;
+        agent.dy = rand.nextInt(32);
+        if (rand.nextBoolean()) agent.dy *= -1;
+        if (infected)
+            agent.infect = rand.nextInt(256);
+        else
+            agent.infect = 0;
+        this.addPerson(agent);
+    }
+
+    protected void createPerson(int x, int y, int dx, int dy, boolean startInfected) {
+        Agent agent = new Agent();
+        agent.name = "Agent_custom_" + x + "," + y;
+        agent.x = x;
+        agent.y = y;
+        agent.dx = dx;
+        agent.dy = dy;
+        agent.infect = startInfected ? 255 : 0;
+        this.addPerson(agent);
     }
     
 }

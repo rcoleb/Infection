@@ -7,7 +7,6 @@ import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -16,7 +15,6 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
-
 
 import net.miginfocom.swing.MigLayout;
 
@@ -36,7 +34,7 @@ public class InfectionGround extends JPanel {
         final InfectionGround ig = new InfectionGround();
         final ControlPanel cp = new ControlPanel(ig);
         
-        ig.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
+        ig.population.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
         frame.add(ig);
         frame.add(cp);
         frame.setVisible(true);
@@ -77,7 +75,7 @@ public class InfectionGround extends JPanel {
                 if (e.getButton() == 2) {
                     ig.startInfected = false;
                 } else if (e.getButton() == 3){
-                    ig.startInfected = true;
+                    ig.startInfected = !e.isShiftDown();
                 } else {
                     return;
                 }
@@ -87,8 +85,22 @@ public class InfectionGround extends JPanel {
             
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (ig.startX != -1 && ig.startY != -1)
-                ig.createPerson(e.getX(), e.getY());
+                if (ig.startX != -1 && ig.startY != -1) {
+                    int dx, dy;
+                    if (Math.abs(ig.startX - e.getX()) < 0.1 && Math.abs(ig.startY - e.getY()) < 0.1) {
+                        Random rand = new Random();
+                        dx = rand.nextInt(32);
+                        if (rand.nextBoolean()) dx *= -1;
+                        dy = rand.nextInt(32);
+                        if (rand.nextBoolean()) dy *= -1;
+                    } else {
+                        dx = ig.startX - e.getX();
+                        dy = ig.startY - e.getY();
+                    }
+                    ig.population.createPerson(ig.startX, ig.startY, dx, dy, ig.startInfected);
+                }
+                ig.startX = ig.startY = -1;
+                ig.startInfected = false;
             }
             
         });
@@ -204,67 +216,6 @@ public class InfectionGround extends JPanel {
     private boolean drawIncub;
     protected boolean drawInfectionTree;
     
-    public void createPeople(int cnt, int h, int w, int infect) {
-        Random rand = new Random();
-        for (int i = 0; i < cnt; i++) {
-            Agent agent = new Agent();
-            agent.name = "Agent_" + i;
-            agent.x = rand.nextInt(w);
-            agent.y = rand.nextInt(w);
-            agent.dx = rand.nextInt(Constants.TOP_GEN_SPEED);
-            if (rand.nextBoolean()) agent.dx *= -1;
-            agent.dy = rand.nextInt(Constants.TOP_GEN_SPEED);
-            if (rand.nextBoolean()) agent.dy *= -1;
-            if (rand.nextInt(100) < infect)
-                agent.infect = rand.nextInt(256);
-            else
-                agent.infect = 0;
-            this.population.addPerson(agent);
-            
-        }
-        
-    }
-    
-    public void createPerson(int x, int y, boolean infected) {
-        Random rand = new Random();
-        Agent agent = new Agent();
-        agent.name = "Agent_custom_" + x + "," + y;
-        agent.x = x;
-        agent.y = y;
-        agent.dx = rand.nextInt(32);
-        if (rand.nextBoolean()) agent.dx *= -1;
-        agent.dy = rand.nextInt(32);
-        if (rand.nextBoolean()) agent.dy *= -1;
-        if (infected)
-            agent.infect = rand.nextInt(256);
-        else
-            agent.infect = 0;
-        this.population.addPerson(agent);
-    }
-
-    protected void createPerson(int x, int y) {
-        Agent agent = new Agent();
-        agent.name = "Agent_custom_" + this.startX + "," + this.startY;
-        agent.x = this.startX;
-        agent.y = this.startY;
-        if (Math.abs(this.startX - x) < 0.1 && Math.abs(this.startY - y) < 0.1) {
-            Random rand = new Random();
-            agent.dx = rand.nextInt(32);
-            if (rand.nextBoolean()) agent.dx *= -1;
-            agent.dy = rand.nextInt(32);
-            if (rand.nextBoolean()) agent.dy *= -1;
-        } else {
-            agent.dx = this.startX - x;
-            agent.dy = this.startY - y;
-        }
-        agent.infect = this.startInfected ? 255 : 0;
-        this.startX = this.startY = -1;
-        this.startInfected = false;
-        this.population.addPerson(agent);
-    }
-
-
-
     public void setDrawVelocity(boolean selected) {
         this.drawVeloc = selected;
     }
@@ -277,94 +228,9 @@ public class InfectionGround extends JPanel {
         this.pauseSim = sel;
     }
 
-}
+    public void restart() {
+        this.population = new Population();
+        this.population.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
+    }
 
-class Stat {
-    final double time;
-    final int pop;
-    final int h;
-    final int i;
-    public Stat(double t, int p, int h, int i) {
-        this.time = t;
-        this.pop = p;
-        this.h = h;
-        this.i = i;
-    }
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append(this.time).append(",").append(this.pop).append(",").append(this.h).append(",").append(this.i);
-        return builder.toString();
-    }
-    
-}
-
-class Agent {
-    
-    public float incubation;
-    // unique id
-    String name;
-    // 0 -> W; 0 -> H
-    float x, y;
-    // 
-    float dx, dy;
-    // 0 - 255
-    float infect;
-    // set for now
-    int deltaInfect = 5;
-    boolean selected = false;
-    Agent infector = null;
-    ArrayList<Agent> infected = new ArrayList<>();
-    
-    /* (non-Javadoc)
-     * @see java.lang.Object#hashCode()
-     */
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((this.name == null) ? 0 : this.name.hashCode());
-        return result;
-    }
-    /* (non-Javadoc)
-     * @see java.lang.Object#equals(java.lang.Object)
-     */
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (!(obj instanceof Agent)) {
-            return false;
-        }
-        Agent other = (Agent) obj;
-        if (this.name == null) {
-            if (other.name != null) {
-                return false;
-            }
-        } else if (!this.name.equals(other.name)) {
-            return false;
-        }
-        return true;
-    }
-    
-}
-
-class Constants {
-    static final int POPULATION = 200;
-    static final int[] CITY_SIZE = {800, 800};
-    static final int INFECTED_PCT = 0;
-    
-    static final int INFECT_RADIUS = 8;
-    static final int INCUBATION = 10;
-    static final int AGENT_SIZE = 4;
-    static final int AGENT_GRID_CELLS = 11;
-    static final int TOP_GEN_SPEED = 46;
-    static final int SELECT_RADIUS = 10;
 }

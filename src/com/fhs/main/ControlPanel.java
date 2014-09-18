@@ -8,11 +8,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
-import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
@@ -27,18 +26,17 @@ public class ControlPanel extends JPanel {
     
     enum GRAPH_TYPE {
         HEALTHY,
-        INFECTED
+        INFECTED, BOTH
     }
         
     class PopGraph extends JPanel implements UpdateListener {
         
         private static final int NS_INSET = 3;
         private static final int EW_INSET = 0; 
-        InfectionGround population;
-        GRAPH_TYPE type = GRAPH_TYPE.HEALTHY;
+        InfectionGround ig;
         
-        public PopGraph(InfectionGround pop) {
-            this.population = pop;
+        public PopGraph(InfectionGround scape) {
+            this.ig = scape;
         }
         
         @Override
@@ -51,10 +49,8 @@ public class ControlPanel extends JPanel {
             g2d.drawLine(EW_INSET, bnds.height - NS_INSET, bnds.width - EW_INSET, bnds.height - NS_INSET);
             g2d.drawLine(EW_INSET, NS_INSET, EW_INSET, bnds.height - NS_INSET);
             
-            ArrayList<Stat> stats = (ArrayList<Stat>) this.population.population.stats.clone();
-            
+            ArrayList<Stat> stats = (ArrayList<Stat>) this.ig.population.stats.clone();
             if (stats.isEmpty()) return;
-            g2d.setColor(this.type == GRAPH_TYPE.HEALTHY ? Color.GREEN.darker() : Color.RED.darker());
             float dispHght = bnds.height - NS_INSET - NS_INSET;
             float dispWdth = bnds.width - EW_INSET - EW_INSET;
             
@@ -65,22 +61,42 @@ public class ControlPanel extends JPanel {
             }
             int sampleSkip = stats.size() > bnds.width ? stats.size() / bnds.width : 1;
             float tickWidth = stats.size() > bnds.width ? 1 : bnds.width / stats.size();
-            float tickXStart = EW_INSET + 1;
-            float tickXEnd = tickXStart + tickWidth;
-            float tickYStart = NS_INSET + NS_INSET;
-            float tickYEnd = tickYStart;
-            for (int i = 0; i < stats.size(); i += sampleSkip) {
-                Stat stat = stats.get(i);
-                float ratio = (this.type == GRAPH_TYPE.HEALTHY ? stat.h : stat.i) / (float)maxPop;
-                
-                tickYEnd = (NS_INSET + (dispHght - ((dispHght - 1) * ratio)));
-                g2d.drawLine((int) tickXStart, (int) tickYStart, (int) tickXEnd, (int) tickYEnd);
-                
-                tickXStart = tickXEnd;
-                tickXEnd += tickWidth;
-                tickYStart = tickYEnd;
+            draw_healthy : {
+                g2d.setColor(Color.GREEN.darker());
+                double tickXStart = EW_INSET + 1;
+                double tickXEnd = tickXStart + tickWidth;
+                double tickYStart = NS_INSET + (((Constants.POPULATION - (Constants.INFECTED_PCT * Constants.POPULATION)) / Constants.POPULATION));
+                double tickYEnd = tickYStart;
+                for (int i = 0; i < stats.size(); i += sampleSkip) {
+                    Stat stat = stats.get(i);
+                    double ratio = stat.h / (double)maxPop;
+                    
+                    tickYEnd = (NS_INSET + (dispHght - ((dispHght - 1) * ratio)));
+                    g2d.drawLine((int) tickXStart, (int) tickYStart, (int) tickXEnd, (int) tickYEnd);
+                    
+                    tickXStart = tickXEnd;
+                    tickXEnd += tickWidth;
+                    tickYStart = tickYEnd;
+                }
             }
-            
+            draw_infected : {
+                g2d.setColor(Color.RED.darker());
+                float tickXStart = EW_INSET + 1;
+                float tickXEnd = tickXStart + tickWidth;
+                float tickYStart = NS_INSET + (dispHght - (Constants.INFECTED_PCT * Constants.POPULATION));
+                float tickYEnd = tickYStart;
+                for (int i = 0; i < stats.size(); i += sampleSkip) {
+                    Stat stat = stats.get(i);
+                    float ratio = stat.i / (float)maxPop;
+                    
+                    tickYEnd = (NS_INSET + (dispHght - ((dispHght - 1) * ratio)));
+                    g2d.drawLine((int) tickXStart, (int) tickYStart, (int) tickXEnd, (int) tickYEnd);
+                    
+                    tickXStart = tickXEnd;
+                    tickXEnd += tickWidth;
+                    tickYStart = tickYEnd;
+                }
+            }
             
         }
 
@@ -99,19 +115,24 @@ public class ControlPanel extends JPanel {
     public JLabel dLblTotPop;
     public JLabel dLblHealthy;
     public JLabel dLblInfected;
-    private Agent selectedAgent = null;
+    Agent selectedAgent = null;
+    PopGraph popGraph;
 
     /**
      * Create the panel.
      */
     public ControlPanel(final InfectionGround scape) {
-        setLayout(new MigLayout("", "[][]", "[][][][][30px][][][grow][16.00][][][][][][][grow 20]"));
+        /////                                0 1 2 3  4    5 6 7 8   9     10   1112131415161718   19
+        setLayout(new MigLayout("", "[][]", "[][][][][30px][][][][][grow][16.00][][][][][][][][][grow 20]"));
         
         JSeparator separator = new JSeparator();
         add(separator, "flowx,cell 0 0 2 1,growx");
         
         JLabel lblStats = new JLabel("Stats:");
         add(lblStats, "cell 0 0 2 1");
+        
+        JSeparator separator_1 = new JSeparator();
+        add(separator_1, "cell 0 0 2 1,growx");
         
         JLabel lblPopulation = new JLabel("Population:");
         add(lblPopulation, "cell 0 1,alignx right");
@@ -144,40 +165,19 @@ public class ControlPanel extends JPanel {
             }
         });
         
-        final PopGraph panel = new PopGraph(scape);
-        scape.population.registerUpdateListener(panel);
+        this.popGraph = new PopGraph(scape);
+        scape.population.registerUpdateListener(this.popGraph);
 //        JPanel panel = new JPanel();
-        add(panel, "cell 0 4 2 1,grow");
-        
-        JRadioButton rdbtnHealthy = new JRadioButton("Healthy");
-        rdbtnHealthy.setSelected(true);
-        add(rdbtnHealthy, "cell 0 5");
-        
-        JRadioButton rdbtnInfected = new JRadioButton("Infected");
-        add(rdbtnInfected, "cell 1 5");
-        
-        rdbtnHealthy.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                panel.type = GRAPH_TYPE.HEALTHY;
-            }
-        });
-        rdbtnInfected.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                panel.type = GRAPH_TYPE.INFECTED;
-            }
-        });
-        
-        ButtonGroup bg = new ButtonGroup();
-        bg.add(rdbtnHealthy);
-        bg.add(rdbtnInfected);
+        add(this.popGraph, "cell 0 4 2 1,grow");
         
         JSeparator separator_2 = new JSeparator();
-        add(separator_2, "flowx,cell 0 8 2 1,growx");
+        add(separator_2, "flowx,cell 0 10 2 1,growx");
         
         JLabel lblControls = new JLabel("Controls:");
-        add(lblControls, "cell 0 8 2 1");
+        add(lblControls, "cell 0 10 2 1");
+        
+        JSeparator separator_3 = new JSeparator();
+        add(separator_3, "cell 0 10 2 1,growx");
         
         JCheckBox chkbxAvoidInfect = new JCheckBox("Avoid Infected");
         
@@ -196,10 +196,24 @@ public class ControlPanel extends JPanel {
                 scape.drawInfectionTree = chkbxShowInfectTree.isSelected();
             }
         });
-        add(chkbxShowInfectTree, "cell 0 9 2 1");
-        add(chkbxAvoidInfect, "cell 0 10 2 1");
-        add(chkbxInfectFollow, "cell 0 11 2 1");
-        add(chkbxDrawIncub, "cell 0 12 2 1");
+        add(chkbxShowInfectTree, "cell 0 11 2 1");
+        add(chkbxAvoidInfect, "cell 0 12 2 1");
+        add(chkbxInfectFollow, "cell 0 13 2 1");
+        add(chkbxDrawIncub, "cell 0 14 2 1");
+        
+        final JCheckBox chkbxShowVel = new JCheckBox("Show Velocity Trails");
+        chkbxShowVel.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        scape.setDrawVelocity(chkbxShowVel.isSelected());                        
+                    }
+                });
+            }
+        });
+        add(chkbxShowVel, "cell 0 15 2 1");
         
         final JToggleButton tglbtnPlayPause = new JToggleButton("Pause");
         tglbtnPlayPause.addActionListener(new ActionListener() {
@@ -215,27 +229,19 @@ public class ControlPanel extends JPanel {
                 });
             }
         });
+        add(tglbtnPlayPause, "cell 0 16 2 1,growx");
         
-        final JCheckBox chkbxShowVel = new JCheckBox("Show Velocity Trails");
-        chkbxShowVel.addActionListener(new ActionListener() {
+        final JButton btnReset = new JButton("Restart");
+        btnReset.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        scape.setDrawVelocity(chkbxShowVel.isSelected());                        
-                    }
-                });
+                ControlPanel.this.selectedAgent = null;
+                scape.restart();
+                scape.population.registerUpdateListener(ControlPanel.this.popGraph);
+                scape.population.pingUpdate();
             }
         });
-        add(chkbxShowVel, "cell 0 13 2 1");
-        add(tglbtnPlayPause, "cell 0 14 2 1,growx");
-        
-        JSeparator separator_1 = new JSeparator();
-        add(separator_1, "cell 0 0 2 1,growx");
-        
-        JSeparator separator_3 = new JSeparator();
-        add(separator_3, "cell 0 8 2 1,growx");
+        add(btnReset, "cell 0 17 2 1, growx");
         
     }
 
@@ -244,11 +250,10 @@ public class ControlPanel extends JPanel {
             this.selectedAgent.selected = false;
             
         }
+        this.selectedAgent = clickedAgent;
         if (clickedAgent == null || (this.selectedAgent != null && this.selectedAgent.equals(clickedAgent))) {
-            this.selectedAgent = null;
             return;
         }
-        this.selectedAgent = clickedAgent;
         clickedAgent.selected = !clickedAgent.selected;
         
     }
