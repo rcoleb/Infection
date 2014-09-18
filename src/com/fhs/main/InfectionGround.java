@@ -126,6 +126,7 @@ public class InfectionGround extends JPanel {
                     while (this.accum >= this.dTime) {
                         if (!ig.pauseSim) {
                             ig.population.update(this.dTime, ig.getBounds());
+                            
                         }
                         this.accum -= this.dTime;
                     }
