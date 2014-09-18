@@ -89,15 +89,22 @@ public class InfectionGround extends JPanel {
                     int dx, dy;
                     if (Math.abs(ig.startX - e.getX()) < 0.1 && Math.abs(ig.startY - e.getY()) < 0.1) {
                         Random rand = new Random();
-                        dx = rand.nextInt(32);
-                        if (rand.nextBoolean()) dx *= -1;
-                        dy = rand.nextInt(32);
-                        if (rand.nextBoolean()) dy *= -1;
+                        int cnt = 1;
+                        if (e.isAltDown()) {
+                            cnt = 0;
+                        }
+                        for (int i = 0; i < cnt; i++) {
+                            dx = rand.nextInt(32);
+                            if (rand.nextBoolean()) dx *= -1;
+                            dy = rand.nextInt(32);
+                            if (rand.nextBoolean()) dy *= -1;
+                            ig.population.createPerson(ig.startX, ig.startY, dx, dy, ig.startInfected);
+                        }
                     } else {
                         dx = ig.startX - e.getX();
                         dy = ig.startY - e.getY();
+                        ig.population.createPerson(ig.startX, ig.startY, dx, dy, ig.startInfected);
                     }
-                    ig.population.createPerson(ig.startX, ig.startY, dx, dy, ig.startInfected);
                 }
                 ig.startX = ig.startY = -1;
                 ig.startInfected = false;
@@ -185,7 +192,7 @@ public class InfectionGround extends JPanel {
                     g2d.setColor(c);
                 }
                 for (Agent inf : person.infected ) {
-                    g2d.drawLine((int) person.x, (int) person.y, (int) inf.x, (int) inf.y);
+                    g2d.drawLine((int) person.x + (Constants.AGENT_SIZE / 2), (int) person.y + (Constants.AGENT_SIZE / 2), (int) inf.x + (Constants.AGENT_SIZE / 2), (int) inf.y + (Constants.AGENT_SIZE / 2));
                 }
             }
             
@@ -212,7 +219,7 @@ public class InfectionGround extends JPanel {
         
     }
     
-    Population population = new Population();
+    Population population = new Population(this.getBounds());
     private boolean drawVeloc;
     private boolean drawIncub;
     protected boolean drawInfectionTree;
@@ -230,7 +237,7 @@ public class InfectionGround extends JPanel {
     }
 
     public void restart() {
-        this.population = new Population();
+        this.population = new Population(this.getBounds());
         this.population.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
     }
 

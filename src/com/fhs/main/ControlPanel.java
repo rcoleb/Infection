@@ -117,6 +117,13 @@ public class ControlPanel extends JPanel {
     public JLabel dLblInfected;
     Agent selectedAgent = null;
     PopGraph popGraph;
+    JCheckBox chkbxDrawIncub;
+    JCheckBox chkbxAvoidInfect;
+    JCheckBox chkbxInfectFollow;
+    JCheckBox chkbxShowInfectTree;
+    JCheckBox chkbxShowVel;
+    JToggleButton tglbtnPlayPause;
+    JButton btnReset;
 
     /**
      * Create the panel.
@@ -152,14 +159,14 @@ public class ControlPanel extends JPanel {
         this.dLblInfected = new JLabel("");
         add(this.dLblInfected, "cell 1 3,alignx right");
         
-        final JCheckBox chkbxDrawIncub = new JCheckBox("Show Incubation");
-        chkbxDrawIncub.addActionListener(new ActionListener() {
+        this.chkbxDrawIncub = new JCheckBox("Show Incubation");
+        this.chkbxDrawIncub.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
-                        scape.setDrawIncubation(chkbxDrawIncub.isSelected());                        
+                        scape.setDrawIncubation(ControlPanel.this.chkbxDrawIncub.isSelected());                        
                     }
                 });
             }
@@ -179,83 +186,88 @@ public class ControlPanel extends JPanel {
         JSeparator separator_3 = new JSeparator();
         add(separator_3, "cell 0 10 2 1,growx");
         
-        JCheckBox chkbxAvoidInfect = new JCheckBox("Avoid Infected");
+        this.chkbxAvoidInfect = new JCheckBox("Avoid Infected");
         
-        final JCheckBox chkbxInfectFollow = new JCheckBox("Follow Infector");
-        chkbxInfectFollow.addActionListener(new ActionListener() {
+        this.chkbxInfectFollow = new JCheckBox("Follow Infector");
+        this.chkbxInfectFollow.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                scape.population.optFollowHost = chkbxInfectFollow.isSelected();
+                scape.population.optFollowHost = ControlPanel.this.chkbxInfectFollow.isSelected();
             }
         });
         
-        final JCheckBox chkbxShowInfectTree = new JCheckBox("Show Infection Tree");
-        chkbxShowInfectTree.addActionListener(new ActionListener() {
+        this.chkbxShowInfectTree = new JCheckBox("Show Infection Tree");
+        this.chkbxShowInfectTree.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                scape.drawInfectionTree = chkbxShowInfectTree.isSelected();
+                scape.drawInfectionTree = ControlPanel.this.chkbxShowInfectTree.isSelected();
             }
         });
-        add(chkbxShowInfectTree, "cell 0 11 2 1");
-        add(chkbxAvoidInfect, "cell 0 12 2 1");
-        add(chkbxInfectFollow, "cell 0 13 2 1");
-        add(chkbxDrawIncub, "cell 0 14 2 1");
+        add(this.chkbxShowInfectTree, "cell 0 11 2 1");
+        add(this.chkbxAvoidInfect, "cell 0 12 2 1");
+        add(this.chkbxInfectFollow, "cell 0 13 2 1");
+        add(this.chkbxDrawIncub, "cell 0 14 2 1");
         
-        final JCheckBox chkbxShowVel = new JCheckBox("Show Velocity Trails");
-        chkbxShowVel.addActionListener(new ActionListener() {
+        this.chkbxShowVel = new JCheckBox("Show Velocity Trails");
+        this.chkbxShowVel.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
-                        scape.setDrawVelocity(chkbxShowVel.isSelected());                        
+                        scape.setDrawVelocity(ControlPanel.this.chkbxShowVel.isSelected());                        
                     }
                 });
             }
         });
-        add(chkbxShowVel, "cell 0 15 2 1");
+        add(this.chkbxShowVel, "cell 0 15 2 1");
         
-        final JToggleButton tglbtnPlayPause = new JToggleButton("Pause");
-        tglbtnPlayPause.addActionListener(new ActionListener() {
+        this.tglbtnPlayPause = new JToggleButton("Pause");
+        this.tglbtnPlayPause.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
-                        boolean sel = tglbtnPlayPause.isSelected();
+                        boolean sel = ControlPanel.this.tglbtnPlayPause.isSelected();
                         scape.pausePlay(sel);
-                        tglbtnPlayPause.setText(sel ? "Play" : "Pause");
+                        ControlPanel.this.tglbtnPlayPause.setText(sel ? "Play" : "Pause");
                     }
                 });
             }
         });
-        add(tglbtnPlayPause, "cell 0 16 2 1,growx");
+        add(this.tglbtnPlayPause, "cell 0 16 2 1,growx");
         
-        final JButton btnReset = new JButton("Restart");
-        btnReset.addActionListener(new ActionListener() {
+        this.btnReset = new JButton("Restart");
+        this.btnReset.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                ControlPanel.this.selectedAgent = null;
+                ControlPanel.this.chkbxAvoidInfect.setSelected(false);
+                ControlPanel.this.chkbxDrawIncub.setSelected(false);
+                ControlPanel.this.chkbxInfectFollow.setSelected(false);
+                ControlPanel.this.chkbxShowInfectTree.setSelected(false);
+                ControlPanel.this.chkbxShowVel.setSelected(false);
                 ControlPanel.this.selectedAgent = null;
                 scape.restart();
                 scape.population.registerUpdateListener(ControlPanel.this.popGraph);
                 scape.population.pingUpdate();
             }
         });
-        add(btnReset, "cell 0 17 2 1, growx");
+        add(this.btnReset, "cell 0 17 2 1, growx");
         
     }
 
     public void clickedAgent(Agent clickedAgent) {
         if (this.selectedAgent != null) {
             this.selectedAgent.selected = false;
-            
         }
-        this.selectedAgent = clickedAgent;
         if (clickedAgent == null || (this.selectedAgent != null && this.selectedAgent.equals(clickedAgent))) {
+            this.selectedAgent = clickedAgent;
             return;
         }
+        this.selectedAgent = clickedAgent;
         clickedAgent.selected = !clickedAgent.selected;
-        
     }
     
 }

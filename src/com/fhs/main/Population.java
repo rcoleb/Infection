@@ -26,6 +26,16 @@ public class Population {
     boolean                       optFollowHost   = false;
     boolean                       optAvoidInfect  = false;
     
+    public Population(Rectangle bnds) {
+        this.currBnds = bnds;
+        this.agentGrid = new ArrayList[Constants.AGENT_GRID_CELLS + 1][Constants.AGENT_GRID_CELLS + 1];
+        for (int i = 0; i < (Constants.AGENT_GRID_CELLS + 1); i++) {
+            for (int j = 0; j < (Constants.AGENT_GRID_CELLS + 1); j++) {
+                this.agentGrid[i][j] = new ArrayList<>();
+            }
+        }
+    }
+    
     public void addPerson(final Agent person) {
         synchronized (Population.LIST_LOCK_1) {
             this.people.add(person);
@@ -293,9 +303,9 @@ public class Population {
         Random rand = new Random();
         for (int i = 0; i < cnt; i++) {
             Agent agent = new Agent();
-            agent.name = "Agent_" + i;
+            agent.name = "Agent_gen_" + i;
             agent.x = rand.nextInt(w);
-            agent.y = rand.nextInt(w);
+            agent.y = rand.nextInt(h);
             agent.dx = rand.nextInt(Constants.TOP_GEN_SPEED);
             if (rand.nextBoolean()) agent.dx *= -1;
             agent.dy = rand.nextInt(Constants.TOP_GEN_SPEED);
@@ -307,7 +317,7 @@ public class Population {
             addPerson(agent);
             
         }
-        
+        this.update(0.0, this.time < 1.0 ? new Rectangle(Constants.CITY_SIZE[0], Constants.CITY_SIZE[1]) : this.currBnds);
     }
 
     public void createPerson(int x, int y, boolean infected) {
@@ -325,17 +335,19 @@ public class Population {
         else
             agent.infect = 0;
         this.addPerson(agent);
+        this.update(0.0, this.currBnds);
     }
 
     protected void createPerson(int x, int y, int dx, int dy, boolean startInfected) {
         Agent agent = new Agent();
-        agent.name = "Agent_custom_" + x + "," + y;
+        agent.name = "Agent_custom_vel_" + x + "," + y;
         agent.x = x;
         agent.y = y;
         agent.dx = dx;
         agent.dy = dy;
         agent.infect = startInfected ? 255 : 0;
         this.addPerson(agent);
+        this.update(0.0, this.currBnds);
     }
     
 }
