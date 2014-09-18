@@ -24,11 +24,6 @@ public class ControlPanel extends JPanel {
         void pingUpdate();
     }
     
-    enum GRAPH_TYPE {
-        HEALTHY,
-        INFECTED, BOTH
-    }
-        
     class PopGraph extends JPanel implements UpdateListener {
         
         private static final int NS_INSET = 3;
