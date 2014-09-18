@@ -6,21 +6,18 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 
-import javax.swing.JPanel;
-import net.miginfocom.swing.MigLayout;
-
 import javax.swing.ButtonGroup;
-import javax.swing.JLabel;
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
 import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
-import javax.swing.JSeparator;
-import javax.swing.JRadioButton;
+
+import net.miginfocom.swing.MigLayout;
 
 public class ControlPanel extends JPanel {
     
@@ -108,7 +105,7 @@ public class ControlPanel extends JPanel {
      * Create the panel.
      */
     public ControlPanel(final InfectionGround scape) {
-        setLayout(new MigLayout("", "[][]", "[][][][][30px][][][grow][16.00][][][][][][grow 20]"));
+        setLayout(new MigLayout("", "[][]", "[][][][][30px][][][grow][16.00][][][][][][][grow 20]"));
         
         JSeparator separator = new JSeparator();
         add(separator, "flowx,cell 0 0 2 1,growx");
@@ -192,9 +189,17 @@ public class ControlPanel extends JPanel {
             }
         });
         
-        add(chkbxAvoidInfect, "cell 0 9 2 1");
-        add(chkbxInfectFollow, "cell 0 10 2 1");
-        add(chkbxDrawIncub, "cell 0 11 2 1");
+        final JCheckBox chkbxShowInfectTree = new JCheckBox("Show Infection Tree");
+        chkbxShowInfectTree.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                scape.drawInfectionTree = chkbxShowInfectTree.isSelected();
+            }
+        });
+        add(chkbxShowInfectTree, "cell 0 9 2 1");
+        add(chkbxAvoidInfect, "cell 0 10 2 1");
+        add(chkbxInfectFollow, "cell 0 11 2 1");
+        add(chkbxDrawIncub, "cell 0 12 2 1");
         
         final JToggleButton tglbtnPlayPause = new JToggleButton("Pause");
         tglbtnPlayPause.addActionListener(new ActionListener() {
@@ -223,8 +228,8 @@ public class ControlPanel extends JPanel {
                 });
             }
         });
-        add(chkbxShowVel, "cell 0 12 2 1");
-        add(tglbtnPlayPause, "cell 0 13 2 1,growx");
+        add(chkbxShowVel, "cell 0 13 2 1");
+        add(tglbtnPlayPause, "cell 0 14 2 1,growx");
         
         JSeparator separator_1 = new JSeparator();
         add(separator_1, "cell 0 0 2 1,growx");

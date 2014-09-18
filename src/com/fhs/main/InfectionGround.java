@@ -7,9 +7,6 @@ import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Timer;
@@ -34,7 +31,7 @@ public class InfectionGround extends JPanel {
     public static void main(String[] args) {
         JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setSize(800, 800);
+        frame.setSize(1000, 1000);
         frame.setLayout(new MigLayout("insets 0, gap rel 0", "[grow, fill][10%]", "[grow, fill]"));
         final InfectionGround ig = new InfectionGround();
         final ControlPanel cp = new ControlPanel(ig);
@@ -77,9 +74,9 @@ public class InfectionGround extends JPanel {
             
             @Override
             public void mousePressed(MouseEvent e) {
-                if (e.getButton() == 3) {
+                if (e.getButton() == 2) {
                     ig.startInfected = false;
-                } else if (e.getButton() == 2){
+                } else if (e.getButton() == 3){
                     ig.startInfected = true;
                 } else {
                     return;
@@ -149,7 +146,7 @@ public class InfectionGround extends JPanel {
             
             if (person.infect == 0) {
                 g2d.setColor(Color.GREEN);
-                g2d.fillOval((int) (person.x), (int) (person.y), sz, sz);
+                
             } else {
                 int tempInf = (int) person.infect;
                 g2d.setColor(new Color(tempInf, 255 - tempInf, 0, tempInf / 3));
@@ -164,7 +161,19 @@ public class InfectionGround extends JPanel {
                 }
                 
                 g2d.setColor(Color.RED);
-                g2d.fillOval((int) (person.x), (int) (person.y), sz, sz);
+            }
+            g2d.fillOval((int) (person.x), (int) (person.y), sz, sz);
+            
+            if (this.drawInfectionTree && person.selected) {
+                if (person.infector != null) {
+                    Color c = g2d.getColor();
+                    g2d.setColor(c.darker());
+                    g2d.drawLine((int) person.x, (int) person.y, (int) person.infector.x, (int) person.infector.y);
+                    g2d.setColor(c);
+                }
+                for (Agent inf : person.infected ) {
+                    g2d.drawLine((int) person.x, (int) person.y, (int) inf.x, (int) inf.y);
+                }
             }
             
             if (this.drawVeloc) {
@@ -193,6 +202,7 @@ public class InfectionGround extends JPanel {
     Population population = new Population();
     private boolean drawVeloc;
     private boolean drawIncub;
+    protected boolean drawInfectionTree;
     
     public void createPeople(int cnt, int h, int w, int infect) {
         Random rand = new Random();
@@ -201,9 +211,9 @@ public class InfectionGround extends JPanel {
             agent.name = "Agent_" + i;
             agent.x = rand.nextInt(w);
             agent.y = rand.nextInt(w);
-            agent.dx = rand.nextInt(32);
+            agent.dx = rand.nextInt(Constants.TOP_GEN_SPEED);
             if (rand.nextBoolean()) agent.dx *= -1;
-            agent.dy = rand.nextInt(32);
+            agent.dy = rand.nextInt(Constants.TOP_GEN_SPEED);
             if (rand.nextBoolean()) agent.dy *= -1;
             if (rand.nextInt(100) < infect)
                 agent.infect = rand.nextInt(256);
@@ -355,5 +365,6 @@ class Constants {
     static final int INCUBATION = 10;
     static final int AGENT_SIZE = 4;
     static final int AGENT_GRID_CELLS = 11;
+    static final int TOP_GEN_SPEED = 46;
     static final int SELECT_RADIUS = 10;
 }
