@@ -26,7 +26,7 @@ public class Population {
     boolean                       optFollowHost   = false;
     boolean                       optAvoidInfect  = false;
     
-    public Population(Rectangle bnds) {
+    public Population(Rectangle bnds, boolean follow, boolean avoid) {
         this.currBnds = bnds;
         this.agentGrid = new ArrayList[Constants.AGENT_GRID_CELLS + 1][Constants.AGENT_GRID_CELLS + 1];
         for (int i = 0; i < (Constants.AGENT_GRID_CELLS + 1); i++) {
@@ -34,6 +34,8 @@ public class Population {
                 this.agentGrid[i][j] = new ArrayList<>();
             }
         }
+        this.optFollowHost = follow;
+        this.optAvoidInfect = avoid;
     }
     
     public void addPerson(final Agent person) {
@@ -56,14 +58,14 @@ public class Population {
                     continue;
                 }
                 // ignore out of range people
-                if ((person.x > (host.x + Constants.INFECT_RADIUS)) || (person.x <= (host.x - Constants.INFECT_RADIUS))) {
+                if ((person.x > (host.x + Constants.currInfectRad)) || (person.x <= (host.x - Constants.currInfectRad))) {
                     continue;
                 }
-                if ((person.y > (host.y + Constants.INFECT_RADIUS)) || (person.y <= (host.y - Constants.INFECT_RADIUS))) {
+                if ((person.y > (host.y + Constants.currInfectRad)) || (person.y <= (host.y - Constants.currInfectRad))) {
                     continue;
                 }
                 person.infect = person.deltaInfect;
-                person.incubation = Constants.INCUBATION;
+                person.incubation = Constants.currIncub;
                 person.infector = host;
                 
                 if (this.optFollowHost) {
@@ -246,13 +248,13 @@ public class Population {
                 // check my bucket:
                 newInfected.addAll(this.infect(host, hostX, hostY));
                 // check if we need to look at adjacent buckets:
-                final int indN = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.y - Constants.INFECT_RADIUS)) / bnds.height));
+                final int indN = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.y - Constants.currInfectRad)) / bnds.height));
                 final boolean checkN = (indN < hostY) && (indN >= 0);
-                final int indS = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.y + Constants.INFECT_RADIUS)) / bnds.height));
+                final int indS = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.y + Constants.currInfectRad)) / bnds.height));
                 final boolean checkS = (indS > hostY) && (indS < Constants.AGENT_GRID_CELLS);
-                final int indW = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.x - Constants.INFECT_RADIUS)) / bnds.width));
+                final int indW = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.x - Constants.currInfectRad)) / bnds.width));
                 final boolean checkW = (indW < hostX) && (indW >= 0);
-                final int indE = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.x + Constants.INFECT_RADIUS)) / bnds.width));
+                final int indE = ((int) Math.floor((Constants.AGENT_GRID_CELLS * (host.x + Constants.currInfectRad)) / bnds.width));
                 final boolean checkE = (indE > hostX) && (indE < Constants.AGENT_GRID_CELLS);
                 
                 if (checkN) {
@@ -301,23 +303,26 @@ public class Population {
 
     public void createPeople(int cnt, int h, int w, int infect) {
         Random rand = new Random();
+        int infected = infect;
+        
         for (int i = 0; i < cnt; i++) {
             Agent agent = new Agent();
             agent.name = "Agent_gen_" + i;
             agent.x = rand.nextInt(w);
             agent.y = rand.nextInt(h);
-            agent.dx = rand.nextInt(Constants.TOP_GEN_SPEED);
+            agent.dx = rand.nextInt(Constants.currTopSpeed);
             if (rand.nextBoolean()) agent.dx *= -1;
-            agent.dy = rand.nextInt(Constants.TOP_GEN_SPEED);
+            agent.dy = rand.nextInt(Constants.currTopSpeed);
             if (rand.nextBoolean()) agent.dy *= -1;
-            if (rand.nextInt(100) < infect)
+            if ((cnt - infected) == i || (infected > 0 && rand.nextInt(cnt) > infect)) {
                 agent.infect = rand.nextInt(256);
-            else
+                infected--;
+            } else
                 agent.infect = 0;
             addPerson(agent);
             
         }
-        this.update(0.0, this.time < 1.0 ? new Rectangle(Constants.CITY_SIZE[0], Constants.CITY_SIZE[1]) : this.currBnds);
+        this.update(0.0, this.time < 1.0 ? new Rectangle(Constants.currSize[0], Constants.currSize[1]) : this.currBnds);
     }
 
     public void createPerson(int x, int y, boolean infected) {
@@ -326,9 +331,9 @@ public class Population {
         agent.name = "Agent_custom_" + x + "," + y;
         agent.x = x;
         agent.y = y;
-        agent.dx = rand.nextInt(32);
+        agent.dx = rand.nextInt(Constants.currTopSpeed);
         if (rand.nextBoolean()) agent.dx *= -1;
-        agent.dy = rand.nextInt(32);
+        agent.dy = rand.nextInt(Constants.currTopSpeed);
         if (rand.nextBoolean()) agent.dy *= -1;
         if (infected)
             agent.infect = rand.nextInt(256);

@@ -34,7 +34,7 @@ public class InfectionGround extends JPanel {
         final InfectionGround ig = new InfectionGround();
         final ControlPanel cp = new ControlPanel(ig);
         
-        ig.population.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
+        ig.population.createPeople(Constants.currPopulation, Constants.currSize[0], Constants.currSize[1], Constants.currInfected);
         frame.add(ig);
         frame.add(cp);
         frame.setVisible(true);
@@ -117,10 +117,6 @@ public class InfectionGround extends JPanel {
         double accum = 0.0;
             
         while(ig.runSim) {
-            if (ig.pauseSim) {
-                currTime = System.currentTimeMillis();
-                continue;
-            }
             double newTime = System.currentTimeMillis();
             double frameTime = newTime - currTime;
             currTime = newTime;
@@ -130,7 +126,6 @@ public class InfectionGround extends JPanel {
             while (accum >= dTime && ig.runSim) {
                 if (!ig.pauseSim) {
                     ig.population.update(dTime, ig.getBounds());
-                    
                 }
                 accum -= dTime;
             }
@@ -166,13 +161,13 @@ public class InfectionGround extends JPanel {
             } else {
                 int tempInf = (int) person.infect;
                 g2d.setColor(new Color(tempInf, 0, 0, tempInf / 3));
-                int rad = Constants.INFECT_RADIUS;
-                int diam = (Constants.INFECT_RADIUS * 2) + sz;
+                int rad = Constants.currInfectRad;
+                int diam = (Constants.currInfectRad * 2) + sz;
                 g2d.fillOval((int) person.x - rad, (int) person.y - rad, diam, diam);
                 
                 if (person.incubation > 0 && this.drawIncub) {
                     g2d.setColor(Color.yellow.brighter());
-                    float ratio = (person.incubation / Constants.INCUBATION) * (sz * 2);
+                    float ratio = (person.incubation / Constants.currIncub) * (sz * 2);
                     g2d.drawOval((int) (person.x - ratio), (int) (person.y - ratio), (int) (2 * ratio) + sz, (int) (2 * ratio) + sz);
                 }
                 
@@ -215,7 +210,7 @@ public class InfectionGround extends JPanel {
         
     }
     
-    Population population = new Population(this.getBounds());
+    Population population = new Population(this.getBounds(), false, false);
     private boolean drawVeloc;
     private boolean drawIncub;
     protected boolean drawInfectionTree;
@@ -232,9 +227,15 @@ public class InfectionGround extends JPanel {
         this.pauseSim = sel;
     }
 
-    public void restart() {
-        this.population = new Population(this.getBounds());
-        this.population.createPeople(Constants.POPULATION, Constants.CITY_SIZE[0], Constants.CITY_SIZE[1], Constants.INFECTED_PCT);
+    public void restart(int pop, int szX, int szY, int infect, int infRad, int incubation, int topSpeed, boolean follow, boolean avoid) {
+        Constants.currPopulation = pop;
+        Constants.currSize = new int[] {szX, szY};
+        Constants.currInfected = infect;
+        Constants.currInfectRad = infRad;
+        Constants.currIncub = incubation;
+        Constants.currTopSpeed = topSpeed;
+        this.population = new Population(this.getBounds(), follow, avoid);
+        this.population.createPeople(pop, szX, szY, infect);
     }
 
 }
